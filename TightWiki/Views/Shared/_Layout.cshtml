@@ -31,6 +31,36 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <script src="~/js/site.js" asp-append-version="true"></script>
 
+    <script>
+        const hostType = 'hostType';
+        const build = 'build';
+        document.addEventListener("DOMContentLoaded", onInit);
+
+        function getCookie(name) {
+            let matches = document.cookie.match(new RegExp("(?:^|; )" + name.replace(/([\.$?*|{}\(\)\[\]\\\/\+^])/g, '\\$1') + "=([^;]*)"));
+            return matches ? decodeURIComponent(matches[1]) : '';
+        }
+
+        function getLink() {
+            return getCookie(build);
+        }
+
+        function onInit(event) {
+            let results = getCookie(hostType);
+
+            if (results === 'None' || results === '') {
+                let elem = document.getElementById('navButton1');
+                elem.style.display = "none";
+            }
+        }
+
+        function navigateToConstructor() {
+            let results = getCookie(hostType);
+            let link = getLink() + '/' + results;
+            window.location.href = link;
+        }
+    </script>
+
     @RenderSection("Scripts", required: false)
 </head>
 
@@ -203,6 +233,10 @@
         }
         @Html.Raw(GlobalSettings.HTMLFooter)
     </div>
+
+    <a id="navButton1" onclick="navigateToConstructor()" class="feedback-btn">
+        <p class="feedback-txt">Аддоны</p>
+    </a>
 
 </body>
 </html>

@@ -230,6 +230,8 @@ namespace TightWiki.Shared.Wiki
                     sb.Append("_");
                 }
                 else if ((c >= 'A' && c <= 'Z')
+                    || (c >= 'А' && c <= 'Я')
+                    || (c >= 'а' && c <= 'я')
                     || (c >= 'a' && c <= 'z')
                     || (c >= '0' && c <= '9')
                     || c == '_' || c == '/'

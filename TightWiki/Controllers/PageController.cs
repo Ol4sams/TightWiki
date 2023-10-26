@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using TightWiki.Controllers;
 using TightWiki.Shared;
 using TightWiki.Shared.Library;
@@ -79,6 +80,13 @@ namespace TightWiki.Site.Controllers
         [HttpPost]
         public ActionResult Search(int page, PageSearchModel model)
         {
+            static bool ContainsCyrillic(string input)
+            {
+                if (input is null) return false;
+                Regex regex = new(@"\p{IsCyrillic}");
+                return regex.IsMatch(input.ToString());
+            }
+
             ViewBag.Context.Title = $"Page Search";
 
             page = 1;
@@ -96,11 +104,22 @@ namespace TightWiki.Site.Controllers
                                       }).ToList());
             }
 
-            model = new PageSearchModel()
+            if (ContainsCyrillic(searchTerms.Select(i => i.Token).FirstOrDefault()))
             {
-                Pages = PageRepository.PageSearchPaged(searchTerms, page, 0),
-                SearchTokens = model.SearchTokens
-            };
+                model = new PageSearchModel()
+                {
+                    Pages = PageRepository.PageSearchRussianPages(searchTerms.Select(i => i.Token).ToList()),
+                    SearchTokens = model.SearchTokens
+                };
+            }
+            else
+            {
+                model = new PageSearchModel()
+                {
+                    Pages = PageRepository.PageSearchPaged(searchTerms, page, 0),
+                    SearchTokens = model.SearchTokens
+                };
+            }
 
             if (model.Pages != null && model.Pages.Any())
             {
@@ -402,6 +421,11 @@ namespace TightWiki.Site.Controllers
         public ActionResult Display(string pageNavigation, int? pageRevision)
         {
             Singletons.DoFirstRun(this);
+
+            //foreach (var item in Request.Query)
+            //{
+            //    Response.Cookies.Append(item.Key, item.Value);
+            //}
 
             var model = new DisplayModel();
 

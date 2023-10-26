@@ -154,6 +154,31 @@ namespace TightWiki.Shared.Repository
                 param, null, true, Singletons.CommandTimeout, CommandType.StoredProcedure).ToList();
         }
 
+        public static List<Page> PageSearchRussianPages(List<string> items)
+        {
+            static DataTable CreateKeywordsDataTable(List<string> keywords)
+            {
+                DataTable table = new DataTable();
+                table.Columns.Add("Value", typeof(string));
+
+                foreach (var keyword in keywords)
+                {
+                    table.Rows.Add(keyword);
+                }
+
+                return table;
+            }
+
+            using var handler = new SqlConnectionHandler();
+            var param = new
+            {
+                SearchTerms = CreateKeywordsDataTable(items)
+            };
+
+            return handler.Connection.Query<Page>("PageSearchRussianPages",
+                param, null, true, Singletons.CommandTimeout, CommandType.StoredProcedure).ToList();
+        }
+
         /// <summary>
         /// Unlike the search, this method retunrs all pages and allows them to be paired down using the search terms.
         /// Whereas the search requires a search term to get results. The matching here is also exact, no score based matching.

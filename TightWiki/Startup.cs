@@ -1,10 +1,17 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Components.Routing;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Primitives;
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net.Http;
 using TightWiki.Shared;
 
 namespace TightWiki
@@ -31,37 +38,19 @@ namespace TightWiki
                     options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
                     options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
                     options.DefaultChallengeScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-                })
-                .AddCookie("Cookies", options =>
+                }).AddCookie("Cookies", options =>
                 {
                     options.Cookie.Name = "RememberMeTightWiki";
                     options.LoginPath = "/Account/Login";
                     options.ExpireTimeSpan = TimeSpan.FromDays(7);
                     options.SlidingExpiration = true;
-                })
-                //https://console.cloud.google.com/apis/credentials
-                //"/Page/Edit/development_notes"
-                .AddGoogle(options =>
+                }).AddGoogle(options =>
                 {
                     options.ClientId = Singletons.GoogleAuthenticationClientId;
                     options.ClientSecret = googleAuthNSection["ClientSecret"];
 
                 });
 
-            /*
-            //Microsoft.AspNetCore.Authentication.MicrosoftAccount
-               .AddMicrosoftAccount(microsoftOptions =>
-               {
-                   microsoftOptions.ClientId = Configuration["Authentication:Microsoft:ClientId"];
-                   microsoftOptions.ClientSecret = Configuration["Authentication:Microsoft:ClientSecret"];
-               });
-            */
-
-            /* https://khalidabuhakmeh.com/how-to-map-a-route-in-an-aspnet-core-mvc-application
-             * First, since all controllers are built (newed up) by the service locator within ASP.NET Core,
-             * we need to have the framework scan our project and register all Controller types. Registering
-             * controllers is accomplished in the ConfigureServices method in our Startup class.
-             */
             services.AddControllersWithViews();
         }
 
@@ -79,13 +68,41 @@ namespace TightWiki
                 app.UseHsts();
             }
 
-            app.UseHttpsRedirection();
+            //app.UseHttpsRedirection();
             app.UseStaticFiles();
 
             app.UseRouting();
 
             app.UseAuthentication();
             app.UseAuthorization();
+
+            app.Use(async (context, next) =>
+            {
+                var cookieOptions = new CookieOptions()
+                {
+                    Path = "/",
+                    Expires = DateTimeOffset.UtcNow.AddHours(1),
+                    IsEssential = true,
+                    HttpOnly = false,
+                    Secure = false,
+                };
+
+                if (context.Request.Query.TryGetValue(StaticDataEntryPoint.HostType_ParamName, out StringValues query))
+                {                    
+                    context.Response.Cookies.Append(StaticDataEntryPoint.HostType_ParamName, query[0]);
+                }
+
+                if (Environment.MachineName == StaticDataEntryPoint.DeveloperMachineName)
+                {
+                    context.Response.Cookies.Append(StaticDataEntryPoint.Build_ParamName, StaticDataEntryPoint.RCMConstructorBaseURI_Debug, cookieOptions);
+                }
+                else
+                {
+                    context.Response.Cookies.Append(StaticDataEntryPoint.Build_ParamName, StaticDataEntryPoint.RCMConstructorBaseURI_Release, cookieOptions);
+                }
+
+                await next();
+            });
 
             app.UseEndpoints(endpoints =>
             {
@@ -279,7 +296,7 @@ namespace TightWiki
                 );
 
                 //endpoints.MapControllers();
-            });
+            });            
 
             Shared.ADO.Singletons.ConnectionString = ConfigurationExtensions.GetConnectionString(this.Configuration, "TightWikiADO");
 
